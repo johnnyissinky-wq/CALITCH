@@ -1158,11 +1158,13 @@
 
             showToast('🔍 Ищем продукт...');
             try {
+                // Fix: removed extra spaces in URL
                 const response = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json`);
                 const data = await response.json();
 
                 if (data.status === 0 || !data.product) {
                     showToast('❌ Продукт не найден в базе OpenFoodFacts', true);
+                    // Still allow manual entry
                     barcodeProductData = {
                         name: `Продукт ${code}`,
                         description: `Штрихкод: ${code} (не найден в базе)`,
@@ -1492,9 +1494,9 @@
                 name: document.getElementById('resultName').textContent,
                 description: document.getElementById('resultDescription').textContent,
                 calories: parseInt(document.getElementById('resultCalories').textContent),
-                protein: parseInt(document.getElementById('resultProtein').textContent) || 0,
-                fat: parseInt(document.getElementById('resultFat').textContent) || 0,
-                carbs: parseInt(document.getElementById('resultCarbs').textContent) || 0
+                protein: parseInt(document.getElementById('resultProtein')),
+                fat: parseInt(document.getElementById('resultFat')),
+                carbs: parseInt(document.getElementById('resultCarbs'))
             };
             templates.push(data);
             renderTemplates();
@@ -1527,9 +1529,9 @@
                 description: document.getElementById('resultDescription').textContent,
                 portion: document.getElementById('resultPortion').textContent.replace('Порция: ', ''),
                 calories: parseInt(document.getElementById('resultCalories').textContent),
-                protein: parseInt(document.getElementById('resultProtein').textContent) || 0,
-                fat: parseInt(document.getElementById('resultFat').textContent) || 0,
-                carbs: parseInt(document.getElementById('resultCarbs').textContent) || 0
+                protein: parseInt(document.getElementById('resultProtein')),
+                fat: parseInt(document.getElementById('resultFat')),
+                carbs: parseInt(document.getElementById('resultCarbs')),
                 timestamp: new Date().toISOString(),
                 source: 'photo'
             };
@@ -1641,8 +1643,7 @@
                 confidence: 100
             });
             navigateTo('home');
-            const photoTab = document.querySelector('.tab-btn');
-            photoTab.click(); // Просто кликните по табу
+            switchTab('photo', { target: document.querySelector('.tab-btn') });
         }
         
         function deleteTemplate(index) {
