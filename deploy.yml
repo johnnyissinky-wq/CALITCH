@@ -1,0 +1,22 @@
+# .github/workflows/deploy.yml
+name: Deploy CALITCH to Firebase
+
+on:
+  push:
+    branches: [ main, master ]  # Деплой при пуше в main
+  workflow_dispatch:  # + кнопка ручного запуска в GitHub
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Firebase
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
+          projectId: calitch-bot
+          entryPoint: .  # Файл CALITCH.html в корне репозитория
