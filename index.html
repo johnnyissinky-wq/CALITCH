@@ -999,7 +999,7 @@
             { id: 'achievement_25', emoji: '🏆', name: 'Коллекционер 25', desc: '25 достижений', check: s => s.achievementCount >= 25 },
             { id: 'achievement_50', emoji: '👑', name: 'Коллекционер 50', desc: '50 достижений', check: s => s.achievementCount >= 50 },
 
-            // Продукты (10)
+            // Продукты (11)
             { id: 'oatmeal_fan', emoji: '🥣', name: 'Овсянка, сэр!', desc: '5 порций овсянки', check: s => s.oatmealMeals >= 5 },
             { id: 'salad_fan', emoji: '🥗', name: 'Салатоман', desc: '10 салатов', check: s => s.saladMeals >= 10 },
             { id: 'fruit_fan', emoji: '🍎', name: 'Фруктовый', desc: '10 фруктов', check: s => s.fruitMeals >= 10 },
@@ -1007,6 +1007,7 @@
             { id: 'soup_fan', emoji: '🥣', name: 'Супермен', desc: '5 супов', check: s => s.soupMeals >= 5 },
             { id: 'rice_fan', emoji: '🍚', name: 'Азиат', desc: '5 блюд с рисом', check: s => s.riceMeals >= 5 },
             { id: 'buckwheat_fan', emoji: '🥘', name: 'Гречколюб', desc: '5 порций гречки', check: s => s.buckwheatMeals >= 5 },
+            { id: 'apple_10', emoji: '🍏', name: 'Тыблочко', desc: 'Съесть 10 яблок', check: s => s.apples >= 10 },
             { id: 'coffee_fan', emoji: '☕', name: 'Кофеман', desc: '10 порций кофе', check: s => s.coffeeMeals >= 10 },
             { id: 'no_sweets_3', emoji: '🚫', name: 'Без сладкого 3', desc: '3 дня без сладкого', check: s => s.noSweetsDays >= 3 },
             { id: 'veggie_day', emoji: '🌱', name: 'Вегетарианец', desc: 'День без мяса', check: s => s.veggieDays >= 1 },
@@ -1515,8 +1516,9 @@ confidence: 70-95 если чётко видно, 50-69 если плохо ви
             const fruitMeals = countByKeyword(['банан', 'яблок', 'апельсин', 'фрукт', 'fruit', 'груша', 'виноград', 'ягод']);
             const pastaMeals = countByKeyword(['паста', 'макарон', 'спагетти', 'pasta']);
             const soupMeals = countByKeyword(['суп', 'борщ', 'щи', 'soup', 'бульон', 'солянка']);
-            const riceMeals = countByKeyword(['рис', 'rice', 'ризотто']);
+            const riceMeals = countByKeyword(['рис', 'rice', 'ризотто'])
             const buckwheatMeals = countByKeyword(['гречк', 'гречих', 'buckwheat']);
+            const apples = countByKeyword(['яблоко', 'яблоки', 'apple']);
             const coffeeMeals = countByKeyword(['кофе', 'coffee', 'капучино', 'латте', 'эспрессо']);
 
             // Photo / text / barcode meals
@@ -2405,3 +2407,4 @@ confidence: 70-95 если чётко видно, 50-69 если плохо ви
     </script>
 </body>
 </html>
+
