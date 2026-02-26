@@ -536,6 +536,119 @@
 
         ::-webkit-scrollbar { width: 0; height: 0; }
         ::selection { background: var(--accent); color: var(--bg-primary); }
+
+        #barcodeScanner video {
+            width: 100% !important;
+            border-radius: 12px;
+        }
+
+        #barcodeScanner img {
+            display: none; /* Hide QR code overlay image */
+        }
+
+        .barcode-scan-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Portion Editor */
+        .portion-editor {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 16px;
+            margin-top: 16px;
+            border: 1px solid var(--border);
+        }
+        .portion-editor-title {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .portion-slider-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .portion-slider-row input[type="range"] {
+            flex: 1;
+            -webkit-appearance: none;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--border);
+            outline: none;
+        }
+        .portion-slider-row input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,212,170,0.4);
+        }
+        .portion-input-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .portion-input-row input[type="number"] {
+            width: 80px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 10px;
+            color: var(--text-primary);
+            font-size: 16px;
+            font-weight: 600;
+            text-align: center;
+        }
+        .portion-input-row input[type="number"]:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        .portion-input-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        .portion-presets {
+            display: flex;
+            gap: 6px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        .portion-preset-btn {
+            padding: 6px 12px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .portion-preset-btn:hover,
+        .portion-preset-btn.active {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(0,212,170,0.1);
+        }
+        .portion-recalc-info {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            justify-content: space-between;
+        }
+        .portion-recalc-info span.changed {
+            color: var(--accent);
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
@@ -661,15 +774,31 @@
 
                 <!-- Barcode Section -->
                 <div id="barcodeSection" class="input-section">
-                    <div class="barcode-area">
+                    <div class="barcode-area" id="barcodeArea">
                         <div style="font-size:48px;margin-bottom:12px;">📊</div>
                         <div style="font-size:16px;font-weight:600;margin-bottom:8px;">Сканер штрихкодов</div>
-                        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">Введите EAN-13 код с упаковки продукта</div>
-                        <div class="barcode-input-row">
-                            <input type="text" id="barcodeInput" placeholder="4600682000019" maxlength="13" inputmode="numeric">
+                        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">Наведите камеру на штрихкод</div>
+                        
+                        <!-- Camera Scanner -->
+                        <div id="barcodeScanner" style="display:none;width:100%;max-width:400px;margin:0 auto;border-radius:12px;overflow:hidden;border:2px solid var(--accent);"></div>
+                        
+                        <!-- Manual Input Fallback -->
+                        <div class="barcode-input-row" style="margin-top:16px;">
+                            <input type="text" id="barcodeInput" placeholder="Или введите вручную..." maxlength="13" inputmode="numeric">
                             <button class="barcode-scan-btn" onclick="scanBarcode()">🔍</button>
                         </div>
+                        
+                        <!-- Camera Controls -->
+                        <div style="display:flex;gap:8px;margin-top:12px;justify-content:center;">
+                            <button class="btn-secondary" id="startCameraBtn" onclick="startBarcodeScanner()" style="margin:0;display:flex;align-items:center;gap:6px;">
+                                📷 Камера
+                            </button>
+                            <button class="btn-secondary" id="stopCameraBtn" onclick="stopBarcodeScanner()" style="margin:0;display:none;align-items:center;gap:6px;background:var(--danger);border-color:var(--danger);">
+                                ⏹️ Стоп
+                            </button>
+                        </div>
                     </div>
+                    
                     <div class="barcode-result" id="barcodeResult">
                         <div class="barcode-product-name" id="barcodeProductName"></div>
                         <div class="barcode-product-brand" id="barcodeProductBrand"></div>
@@ -683,19 +812,69 @@
                 <div id="templatesSection" class="input-section"><div class="templates-grid" id="templatesGrid"></div></div>
 
                 <div class="results-card" id="resultsCard">
-                    <div class="results-header"><span class="results-title">Результат</span><span class="confidence-badge" id="confidenceBadge">85%</span></div>
+                    <div class="results-header">
+                        <span class="results-title">Результат</span>
+                        <span class="confidence-badge" id="confidenceBadge">85%</span>
+                    </div>
                     <div class="macros-grid">
-                        <div class="macro-card calories"><div class="macro-value" id="calValue">0</div><div class="macro-label">Калории</div><div class="macro-sub">ккал</div></div>
-                        <div class="macro-card"><div class="macro-value" id="proteinValue" style="color:var(--protein-color)">0</div><div class="macro-label">Белки</div><div class="macro-sub">грамм</div></div>
-                        <div class="macro-card"><div class="macro-value" id="fatValue" style="color:var(--fat-color)">0</div><div class="macro-label">Жиры</div><div class="macro-sub">грамм</div></div>
-                        <div class="macro-card"><div class="macro-value" id="carbValue" style="color:var(--carb-color)">0</div><div class="macro-label">Углеводы</div><div class="macro-sub">грамм</div></div>
+                        <div class="macro-card calories">
+                            <div class="macro-value" id="calValue">0</div>
+                            <div class="macro-label">Калории</div>
+                            <div class="macro-sub">ккал</div>
+                        </div>
+                        <div class="macro-card">
+                            <div class="macro-value" id="proteinValue" style="color:var(--protein-color)">0</div>
+                            <div class="macro-label">Белки</div>
+                            <div class="macro-sub">грамм</div>
+                        </div>
+                        <div class="macro-card">
+                            <div class="macro-value" id="fatValue" style="color:var(--fat-color)">0</div>
+                            <div class="macro-label">Жиры</div>
+                            <div class="macro-sub">грамм</div>
+                        </div>
+                        <div class="macro-card">
+                            <div class="macro-value" id="carbValue" style="color:var(--carb-color)">0</div>
+                            <div class="macro-label">Углеводы</div>
+                            <div class="macro-sub">грамм</div>
+                        </div>
                     </div>
                     <div class="food-details">
                         <div class="food-name" id="foodName"></div>
                         <div class="food-description" id="foodDesc"></div>
-                        <div class="portion-info"><span>⚖️</span><span id="portionInfo"></span></div>
+                        <div class="portion-info">
+                            <span>⚖️</span>
+                            <span id="portionInfo"></span>
+                        </div>
                         <div class="meal-type-tag" id="resultMealTag"></div>
                     </div>
+
+                    <!-- PORTION EDITOR — NEW -->
+                    <div class="portion-editor" id="portionEditor">
+                        <div class="portion-editor-title">⚖️ Изменить порцию</div>
+                        <div class="portion-slider-row">
+                            <input type="range" id="portionSlider" min="10" max="1000" value="100" step="5"
+                                   oninput="onPortionChange(this.value)">
+                        </div>
+                        <div class="portion-input-row">
+                            <input type="number" id="portionGrams" min="1" max="5000" value="100"
+                                   oninput="onPortionChange(this.value)">
+                            <span class="portion-input-label">грамм</span>
+                            <span class="portion-input-label" style="margin-left:auto;font-size:11px;color:var(--accent);" id="portionMultiplier">×1.00</span>
+                        </div>
+                        <div class="portion-presets" id="portionPresets">
+                            <button class="portion-preset-btn" onclick="setPortionPreset(50)">50г</button>
+                            <button class="portion-preset-btn active" onclick="setPortionPreset(100)">100г</button>
+                            <button class="portion-preset-btn" onclick="setPortionPreset(150)">150г</button>
+                            <button class="portion-preset-btn" onclick="setPortionPreset(200)">200г</button>
+                            <button class="portion-preset-btn" onclick="setPortionPreset(250)">250г</button>
+                            <button class="portion-preset-btn" onclick="setPortionPreset(300)">300г</button>
+                        </div>
+                        <div class="portion-recalc-info">
+                            <span>Базовая: <span id="basePortionText">100г</span></span>
+                            <span class="changed" id="recalcStatus"></span>
+                        </div>
+                    </div>
+
                     <div class="results-actions">
                         <button onclick="saveAsTemplate()">⭐ Шаблон</button>
                         <button onclick="shareResult()">📤 Поделиться</button>
@@ -835,6 +1014,7 @@
 
     <div class="toast" id="toast"></div>
 
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -884,6 +1064,95 @@
         let bestStreak = 0;
         let totalXP = 0;
         let barcodeProductData = null;
+
+        // ==================== BARCODE SCANNER CAMERA ====================
+        let barcodeScanner = null;
+        let isScanning = false;
+
+        async function startBarcodeScanner() {
+            if (isScanning) return;
+            
+            const scannerDiv = document.getElementById('barcodeScanner');
+            const startBtn = document.getElementById('startCameraBtn');
+            const stopBtn = document.getElementById('stopCameraBtn');
+            
+            try {
+                // Check permissions
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                stream.getTracks().forEach(t => t.stop());
+                
+                scannerDiv.style.display = 'block';
+                startBtn.style.display = 'none';
+                stopBtn.style.display = 'flex';
+                
+                barcodeScanner = new Html5Qrcode("barcodeScanner");
+                
+                const config = {
+                    fps: 10,
+                    qrbox: { width: 250, height: 150 },
+                    aspectRatio: 1.0,
+                    formatsToSupport: [
+                        Html5QrcodeSupportedFormats.EAN_13,
+                        Html5QrcodeSupportedFormats.EAN_8,
+                        Html5QrcodeSupportedFormats.UPC_A,
+                        Html5QrcodeSupportedFormats.UPC_E,
+                        Html5QrcodeSupportedFormats.CODE_128
+                    ]
+                };
+                
+                await barcodeScanner.start(
+                    { facingMode: "environment" },
+                    config,
+                    onBarcodeDetected,
+                    onScanError
+                );
+                
+                isScanning = true;
+                addDebug('Barcode scanner started');
+                
+            } catch (err) {
+                addDebug(`Camera error: ${err.message}`);
+                showToast('❌ Нет доступа к камере. Разрешите использование камеры или введите штрихкод вручную.', true);
+                scannerDiv.style.display = 'none';
+                startBtn.style.display = 'flex';
+                stopBtn.style.display = 'none';
+            }
+        }
+
+        function stopBarcodeScanner() {
+            if (!barcodeScanner || !isScanning) return;
+            
+            barcodeScanner.stop().then(() => {
+                isScanning = false;
+                document.getElementById('barcodeScanner').style.display = 'none';
+                document.getElementById('startCameraBtn').style.display = 'flex';
+                document.getElementById('stopCameraBtn').style.display = 'none';
+                addDebug('Barcode scanner stopped');
+            }).catch(err => {
+                addDebug(`Stop scanner error: ${err.message}`);
+            });
+        }
+
+        function onBarcodeDetected(decodedText, decodedResult) {
+            addDebug(`Barcode detected: ${decodedText}`);
+            
+            // Stop scanning
+            stopBarcodeScanner();
+            
+            // Fill input and trigger search
+            document.getElementById('barcodeInput').value = decodedText;
+            showToast(`📊 Найден: ${decodedText}`);
+            
+            // Auto-search
+            scanBarcode();
+        }
+
+        function onScanError(errorMessage) {
+            // Ignore frequent scan errors (no barcode in frame)
+            if (!errorMessage.includes('No barcode')) {
+                addDebug(`Scan error: ${errorMessage}`);
+            }
+        }
 
         const EMOJIS = ['🍽️','🥣','🍳','🥗','🍝','🍖','🍕','🍔','🥪','🌮','🍜','🍱','🥙','🥘','☕','🍰','🍎','🥤'];
 
@@ -1776,6 +2045,11 @@ confidence: 70-95 если чётко видно, 50-69 если плохо ви
         }
 
         function switchTab(tab) {
+            // Stop barcode scanner if leaving barcode tab
+            if (isScanning && tab !== 'barcode') {
+                stopBarcodeScanner();
+            }
+            
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.input-section').forEach(s => s.classList.remove('active'));
             event.target.closest('.tab-btn').classList.add('active');
@@ -1858,42 +2132,55 @@ confidence: 70-95 если чётко видно, 50-69 если плохо ви
                 const data = await response.json();
 
                 if (data.status === 0 || !data.product) {
-                    showToast('❌ Продукт не найден', true);
+                    showToast('❌ Продукт не найден в базе OpenFoodFacts', true);
+                    // Still allow manual entry
+                    barcodeProductData = {
+                        name: `Продукт ${code}`,
+                        description: `Штрихкод: ${code} (не найден в базе)`,
+                        portion: '100г',
+                        calories: 0, protein: 0, fat: 0, carbs: 0, confidence: 50
+                    };
+                    showBarcodeResult(barcodeProductData);
                     return;
                 }
 
                 const product = data.product;
                 const nutrients = product.nutriments || {};
-                const name = product.product_name || product.product_name_ru || 'Неизвестный продукт';
+                const name = product.product_name || product.product_name_ru || product.product_name_en || 'Неизвестный продукт';
                 const brand = product.brands || '';
                 const portion = product.serving_size || '100г';
 
                 barcodeProductData = {
                     name: `${name}${brand ? ' (' + brand + ')' : ''}`,
-                    description: `Штрихкод: ${code}. ${brand ? 'Бренд: ' + brand + '.' : ''} Порция: ${portion}`,
+                    description: `Штри��код: ${code}. ${brand ? 'Бренд: ' + brand + '.' : ''} Порция: ${portion}`,
                     portion: portion,
-                    calories: Math.round(nutrients['energy-kcal_100g'] || nutrients['energy-kcal'] || 0),
+                    calories: Math.round(nutrients['energy-kcal_100g'] || nutrients.energy_kcal || nutrients['energy-kcal_serving'] || 0),
                     protein: Math.round(nutrients.proteins_100g || nutrients.proteins || 0),
                     fat: Math.round(nutrients.fat_100g || nutrients.fat || 0),
                     carbs: Math.round(nutrients.carbohydrates_100g || nutrients.carbohydrates || 0),
-                    confidence: 90
+                    confidence: 90,
+                    barcode: code
                 };
 
-                document.getElementById('barcodeProductName').textContent = name;
-                document.getElementById('barcodeProductBrand').textContent = brand ? `Бренд: ${brand}` : '';
-                document.getElementById('barcodeNutrients').innerHTML = `
-                    <div class="barcode-nutrient"><div class="barcode-nutrient-value" style="color:var(--accent)">${barcodeProductData.calories}</div><div class="barcode-nutrient-label">ккал/100г</div></div>
-                    <div class="barcode-nutrient"><div class="barcode-nutrient-value" style="color:var(--protein-color)">${barcodeProductData.protein}г</div><div class="barcode-nutrient-label">Белки</div></div>
-                    <div class="barcode-nutrient"><div class="barcode-nutrient-value" style="color:var(--fat-color)">${barcodeProductData.fat}г</div><div class="barcode-nutrient-label">Жиры</div></div>
-                    <div class="barcode-nutrient"><div class="barcode-nutrient-value" style="color:var(--carb-color)">${barcodeProductData.carbs}г</div><div class="barcode-nutrient-label">Углеводы</div></div>
-                `;
-                document.getElementById('barcodeResult').classList.add('show');
+                showBarcodeResult(barcodeProductData);
                 showToast('✅ Продукт найден!');
 
             } catch (e) {
                 addDebug(`Barcode error: ${e.message}`);
                 showToast('❌ Ошибка при поиске', true);
             }
+        }
+
+        function showBarcodeResult(data) {
+            document.getElementById('barcodeProductName').textContent = data.name;
+            document.getElementById('barcodeProductBrand').textContent = data.description.split('. ')[1] || '';
+            document.getElementById('barcodeNutrients').innerHTML = `
+                <div class="barcode-nutrient"><div class="barcode-nutrient-value" style="color:var(--accent)">${data.calories}</div><div class="barcode-nutrient-label">ккал/100г</div></div>
+                <div class="barcode-nutrient"><div class="barcode-nutrient-value" style="color:var(--protein-color)">${data.protein}г</div><div class="barcode-nutrient-label">Белки</div></div>
+                <div class="barcode-nutrient"><div class="barcode-nutrient-value" style="color:var(--fat-color)">${data.fat}г</div><div class="barcode-nutrient-label">Жиры</div></div>
+                <div class="barcode-nutrient"><div class="barcode-nutrient-value" style="color:var(--carb-color)">${data.carbs}г</div><div class="barcode-nutrient-label">Углеводы</div></div>
+            `;
+            document.getElementById('barcodeResult').classList.add('show');
         }
 
         async function addBarcodeToHistory() {
@@ -2095,6 +2382,133 @@ confidence: 70-95 если чётко видно, 50-69 если плохо ви
             });
         }
 
+        // ==================== PORTION RECALCULATOR ====================
+        // Stores the "per 100g" base values for the current result
+        let baseNutrients = null; // { calories, protein, fat, carbs, basePortion }
+
+        /**
+         * Extract numeric grams from portion string like "150г", "~200 грамм", "100g"
+         */
+        function extractGrams(portionStr) {
+            if (!portionStr) return 100;
+            const match = String(portionStr).match(/(\d+)/);
+            return match ? parseInt(match[1]) : 100;
+        }
+
+        /**
+         * Calculate per-100g values from the result
+         * Called every time we get a new result
+         */
+        function setBaseNutrients(result) {
+            const portion = extractGrams(result.portion);
+            const factor = portion > 0 ? 100 / portion : 1;
+
+            baseNutrients = {
+                caloriesPer100: result.calories * factor,
+                proteinPer100: result.protein * factor,
+                fatPer100: result.fat * factor,
+                carbsPer100: result.carbs * factor,
+                basePortion: portion
+            };
+
+            // Set slider and input to the original portion
+            const slider = document.getElementById('portionSlider');
+            const input = document.getElementById('portionGrams');
+            if (slider) {
+                slider.value = portion;
+                slider.max = Math.max(1000, portion * 3);
+            }
+            if (input) input.value = portion;
+
+            // Update base text
+            const baseText = document.getElementById('basePortionText');
+            if (baseText) baseText.textContent = `${portion}г (на 100г: ${Math.round(baseNutrients.caloriesPer100)} ккал)`;
+
+            // Update multiplier
+            updatePortionMultiplier(portion);
+
+            // Highlight active preset
+            updatePortionPresets(portion);
+
+            // Clear recalc status
+            const status = document.getElementById('recalcStatus');
+            if (status) status.textContent = '';
+        }
+
+        /**
+         * Called when user changes portion via slider or input
+         */
+        function onPortionChange(grams) {
+            grams = parseInt(grams) || 0;
+            if (grams < 1) grams = 1;
+            if (grams > 5000) grams = 5000;
+
+            // Sync slider and input
+            const slider = document.getElementById('portionSlider');
+            const input = document.getElementById('portionGrams');
+            if (slider && document.activeElement !== slider) slider.value = grams;
+            if (input && document.activeElement !== input) input.value = grams;
+
+            if (!baseNutrients) return;
+
+            // Recalculate
+            const factor = grams / 100;
+            const newCal = Math.round(baseNutrients.caloriesPer100 * factor);
+            const newP = Math.round(baseNutrients.proteinPer100 * factor);
+            const newF = Math.round(baseNutrients.fatPer100 * factor);
+            const newC = Math.round(baseNutrients.carbsPer100 * factor);
+
+            // Update displayed values
+            document.getElementById('calValue').textContent = newCal;
+            document.getElementById('proteinValue').textContent = newP;
+            document.getElementById('fatValue').textContent = newF;
+            document.getElementById('carbValue').textContent = newC;
+            document.getElementById('portionInfo').textContent = `Порция: ${grams}г`;
+
+            // Update lastResult so saving uses correct values
+            if (lastResult) {
+                lastResult.calories = newCal;
+                lastResult.protein = newP;
+                lastResult.fat = newF;
+                lastResult.carbs = newC;
+                lastResult.portion = `${grams}г`;
+            }
+
+            updatePortionMultiplier(grams);
+            updatePortionPresets(grams);
+
+            // Show recalc status
+            const status = document.getElementById('recalcStatus');
+            if (status) {
+                if (grams !== baseNutrients.basePortion) {
+                    status.textContent = `✏️ Пересчитано`;
+                } else {
+                    status.textContent = '';
+                }
+            }
+        }
+
+        function updatePortionMultiplier(grams) {
+            const el = document.getElementById('portionMultiplier');
+            if (el && baseNutrients) {
+                const mult = grams / baseNutrients.basePortion;
+                el.textContent = `×${mult.toFixed(2)}`;
+            }
+        }
+
+        function setPortionPreset(grams) {
+            document.getElementById('portionGrams').value = grams;
+            document.getElementById('portionSlider').value = grams;
+            onPortionChange(grams);
+        }
+
+        function updatePortionPresets(grams) {
+            document.querySelectorAll('.portion-preset-btn').forEach(btn => {
+                const presetVal = parseInt(btn.textContent);
+                btn.classList.toggle('active', presetVal === grams);
+            });
+        }
+
         // ==================== RESULTS ====================
         function getAccuracyClass(confidence) {
             if (confidence >= 80) return 'accuracy-green';
@@ -2118,6 +2532,9 @@ confidence: 70-95 если чётко видно, 50-69 если плохо ви
             // Meal type tag
             const mealTag = document.getElementById('resultMealTag');
             mealTag.textContent = MEAL_TYPE_LABELS[selectedMealType] || '';
+
+            // Initialize portion editor
+            setBaseNutrients(d);
 
             const card = document.getElementById('resultsCard');
             card.classList.add('show');
